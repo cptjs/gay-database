@@ -174,19 +174,7 @@
 
     .back{ position:absolute; top:10px; left:10px; color:#ffd6e8; font-size:14px; }
 
-    /* Original random phrase style (kept) */
-    .phrase{
-      font-weight:800;
-      font-size: clamp(28px, 5vw, 48px);
-      line-height:1.2;
-      letter-spacing:.2px;
-      margin: 0;
-      background: linear-gradient(180deg,#fff,#ffe9f2 70%, #ffd6e8);
-      -webkit-background-clip:text; background-clip:text; color: transparent;
-      text-shadow: 0 2px 10px rgba(0,0,0,.25);
-    }
-
-    /* Big result line: <span class="query-hero">запит</span> : <span class="phrase">фраза</span> */
+    /* Big result line: <span class="query-hero">запит</span> : <span class="phrase">ім'я людини</span> */
     .result-line{
       display:flex;
       flex-wrap:wrap;
@@ -204,6 +192,16 @@
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
+      text-shadow: 0 2px 10px rgba(0,0,0,.25);
+    }
+    .phrase{
+      font-weight:800;
+      font-size: clamp(28px, 5vw, 48px);
+      line-height:1.2;
+      letter-spacing:.2px;
+      margin: 0;
+      background: linear-gradient(180deg,#fff,#ffe9f2 70%, #ffd6e8);
+      -webkit-background-clip:text; background-clip:text; color: transparent;
       text-shadow: 0 2px 10px rgba(0,0,0,.25);
     }
     .result-line .sep{
@@ -231,6 +229,28 @@
     @keyframes spin{ to { transform: rotate(360deg); } }
     .loader p{ color:#ffd6e8; letter-spacing:.3px; margin:0; }
 
+    /* Share bar */
+    .share-bar{
+      display:flex; gap:12px; justify-content:center; align-items:center;
+      flex-wrap:wrap; margin-top:18px;
+    }
+    .share-btn{
+      appearance:none; border:none; cursor:pointer;
+      display:inline-flex; align-items:center; justify-content:center;
+      width:48px; height:48px; border-radius:50%;
+      background:#fff; color:#000;
+      box-shadow:0 4px 14px rgba(0,0,0,.25);
+      transition: transform 200ms ease, filter 200ms ease;
+    }
+    .share-btn:hover{ filter: brightness(1.05); }
+    .share-btn:active{ transform: translateY(1px) scale(.96); }
+    .share-btn svg{ width:24px; height:24px; display:block; }
+
+    /* platform colors */
+    .share-x{ background:#000; color:#fff; }
+    .share-fb{ background:#1877F2; color:#fff; }
+    .share-threads{ background:#000; color:#fff; border:1px solid #333; }
+
     footer{ color: var(--muted); text-align:center; font-size: 13px; padding: 18px 12px 30px; }
     @media (max-width:520px){ .card{ padding:18px; } }
     @media (prefers-reduced-motion: reduce){
@@ -246,12 +266,12 @@
       <section class="card" aria-labelledby="title">
         <div class="stack">
           <h1 id="title">Перевірка всесвітньої бази педіків</h1>
-          <p class="lead">Введіть ім'я та прізвище кирилицею — і дізнайтесь, чи потрібно остерігатись і не підставлятись, або ж зробити для цієї особи камінг-аут 🌈</p>
+          <p class="lead">Перевірка всесвітньої бази педіків 🌈</p>
 
           <form class="row" id="main-form" novalidate>
             <div class="field">
               <label class="visually-hidden" for="q">Запит</label>
-              <input id="q" name="q" type="text" inputmode="text" autocomplete="off" placeholder="Введіть ім'я для перевірки…" aria-describedby="help" />
+              <input id="q" name="q" type="text" inputmode="text" autocomplete="off" placeholder="Введіть свій запит…" aria-describedby="help" />
               <div id="help" class="helper" aria-live="polite"></div>
             </div>
             <button class="btn" id="submit">Перевірити</button>
@@ -260,7 +280,7 @@
       </section>
     </main>
 
-    <footer>Всесвітня база перевірки геїв — оберігай своє очко.</footer>
+    <footer>Всесвітня база перевірки геїв — оберігай своє очко!</footer>
   </div>
 
   <!-- Overlay / Dialog -->
@@ -421,22 +441,69 @@
 "Його шафа — для гачімучі рольовок з сексом — 100% гей.",
 "Він дивиться гачімучі з друзями і трахається — 100% гей.",
 "Його улюблений мем — Ricardo Milos з членом — 100% гей."
+
     ];
 
-    // ======================== // special override // ========================
+    // ======================== // special override (імена/варіації) // ========================
     const OVERRIDE_PHRASE = "100% Натурал!";
 
-    // Допоміжне: ураховує кирилицю/латиницю, будь-який порядок і слова між ними
-    function makeWordRegex(variants){
-      const body = variants.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-      return new RegExp(`(?:^|[^\\p{L}])(?:${body})(?=[^\\p{L}]|$)`,"iu");
+    // НОРМАЛІЗАЦІЯ: нижній регістр, прибирання діакритики, видалення всього, що не літера (залишає кирилицю та латинку)
+    function normalizeLetters(s){
+      const withoutMarks = s.normalize('NFKD').replace(/\p{M}/gu, '');
+      return withoutMarks.toLowerCase().replace(/[^\p{L}]+/gu, '');
     }
-    const FIRST_NAME_RE = makeWordRegex(["олег","oleg","oleh", "o l e h", "o l e g", "о л е г"]);
-    const LAST_NAME_RE  = makeWordRegex(["гарбар","garbar", "h a r b a r", "g a r b a r", "г а р б а р"]);
 
-    function isHarbarQuery(s){
-      if(!s) return false;
-      return FIRST_NAME_RE.test(s) && LAST_NAME_RE.test(s);
+    // ТРАНСЛІТ (спрощений укр/рос → латиниця). Достатній для розпізнавання «олег/oleh» і «гарбар/harbar/garbar»
+    function cyrToLat(s){
+      const map = {
+        'а':'a','б':'b','в':'v','г':'h','ґ':'g','д':'d','е':'e','є':'ie','ж':'zh','з':'z','и':'y','і':'i','ї':'i','й':'i',
+        'к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ю':'yu','я':'ya',
+        'ь':'','ъ':''
+      };
+      return s.replace(/[\u0400-\u04FF]/g, ch => map[ch] ?? ch);
+    }
+
+    // РОЗПІЗНАВАННЯ З НАД-ЗАПАСОМ: працює для «олег гарбар» у будь-якому порядку,
+    // з будь-якими роздільниками, зайвими символами, і в кирилиці або латиниці (або міксі).
+    function isHarbarQuery(input){
+      if(!input) return false;
+      const raw = normalizeLetters(input);
+      if(!raw) return false;
+
+      const latin = cyrToLat(raw); // латинізація нормалізованого рядка
+
+      // Варіанти імені/прізвища (латиниця та кирилиця), уже без пробілів і в нижньому регістрі
+      const firstVariants = [
+        'олег','олєг','олeг','олегъ','oleh','oleg','olekh','olehg','oleq' // із запасом
+      ];
+      const lastVariants = [
+        'гарбар','ґарбар','garbar','harbar','gharbar' // допускаємо g/h
+      ];
+
+      // Перевіряємо в двох площинах: оригінальний нормалізований (може бути кирилиця), та латинізований
+      const containsFirst = firstVariants.some(v => raw.includes(v) || latin.includes(v));
+      const containsLast  = lastVariants.some(v => raw.includes(v) || latin.includes(v));
+
+      if(containsFirst && containsLast) return true;
+
+      // ДОДАТКОВИЙ РЕЖИМ: ловимо послідовності типу «о л е г г а р б а р» (літери по одній)
+      // Для цього перевіримо регуляркою по літерах у правильному порядку у злипненому рядку
+      const seq = raw; // вже без не-літер
+      const reFirst = /о\s*л\s*е\s*г|o\s*l\s*e\s*(g|h)/u;   // oleg/oleh (англ. g|h наприкінці)
+      const reLast  = /(г|ґ|h|g)\s*а\s*р\s*б\s*а\s*р/u;    // гарбар/harbar/garbar
+      return reFirst.test(seq) && reLast.test(seq);
+    }
+
+    // ======================== // sharing helpers // ========================
+    const PAGE_URL = (location.origin && location.protocol.startsWith("http"))
+      ? location.href.split('#')[0]
+      : ""; // при file:// залишаємо порожнім
+
+    function buildShareText(query, phrase){
+      return `${query}: ${phrase}`;
+    }
+    function openShareWindow(url){
+      window.open(url, "_blank", "noopener,noreferrer");
     }
 
     // ======================== // state // ========================
@@ -526,11 +593,33 @@
             <span class="sep">:</span>
             <span class="phrase" id="result-phrase">${escapeHTML(phrase)}</span>
           </h2>
+
           <form class="inline-form" id="inline-form" novalidate aria-label="Нова перевірка">
-            <label class="visually-hidden" for="q2">Перевірити іншу особу…</label>
+            <label class="visually-hidden" for="q2">Спробуйте інший запит…</label>
             <input id="q2" name="q2" type="text" inputmode="text" autocomplete="off" placeholder="Спробуйте інший запит…" />
             <button class="btn" id="again-btn" type="submit">Перевірити ще</button>
           </form>
+
+          <div class="share-bar" aria-label="Поширити результат">
+            <button class="share-btn share-x" id="share-x" type="button" title="Поділитися в X (Twitter)" aria-label="Поділитися в X">
+              <!-- X icon -->
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26L22.5 21.75h-6.422l-4.989-6.527-5.706 6.527H2.575l7.73-8.836L1.5 2.25h6.594l4.51 5.927 5.64-5.927z"/>
+              </svg>
+            </button>
+            <button class="share-btn share-fb" id="share-fb" type="button" title="Поділитися у Facebook" aria-label="Поділитися у Facebook">
+              <!-- Facebook icon -->
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M22.675 0h-21.35C.597 0 0 .6 0 1.326v21.348C0 23.4.597 24 1.326 24h11.494v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.796.715-1.796 1.763v2.312h3.587l-.467 3.622h-3.12V24h6.116C23.403 24 24 23.403 24 22.674V1.326C24 .6 23.403 0 22.675 0z"/>
+              </svg>
+            </button>
+            <button class="share-btn share-threads" id="share-threads" type="button" title="Поділитися у Threads" aria-label="Поділитися у Threads">
+              <!-- Threads icon (Bootstrap Icons path) -->
+              <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M6.321 6.016c-.27-.18-1.166-.802-1.166-.802.756-1.081 1.753-1.502 3.132-1.502.975 0 1.803.327 2.394.948s.928 1.509 1.005 2.644q.492.207.905.484c1.109.745 1.719 1.86 1.719 3.137 0 2.716-2.226 5.075-6.256 5.075C4.594 16 1 13.987 1 7.994 1 2.034 4.482 0 8.044 0 9.69 0 13.55.243 15 5.036l-1.36.353C12.516 1.974 10.163 1.43 8.006 1.43c-3.565 0-5.582 2.171-5.582 6.79 0 4.143 2.254 6.343 5.63 6.343 2.777 0 4.847-1.443 4.847-3.556 0-1.438-1.208-2.127-1.27-2.127-.236 1.234-.868 3.31-3.644 3.31-1.618 0-3.013-1.118-3.013-2.582 0-2.09 1.984-2.847 3.55-2.847.586 0 1.294.04 1.663.114 0-.637-.54-1.728-1.9-1.728-1.25 0-1.566.405-1.967.868ZM8.716 8.19c-2.04 0-2.304.87-2.304 1.416 0 .878 1.043 1.168 1.6 1.168 1.02 0 2.067-.282 2.232-2.423a6.2 6.2 0 0 0-1.528-.161"/>
+              </svg>
+            </button>
+          </div>
         </div>
       `;
       const inlineForm = document.getElementById('inline-form');
@@ -541,6 +630,29 @@
         runCheck(q2.value.trim());
       });
       q2.focus();
+
+      // --- share handlers ---
+      const text = buildShareText(currentQuery, phrase);
+      const encodedText = encodeURIComponent(text);
+      const encodedURL  = encodeURIComponent(PAGE_URL || "");
+
+      // X
+      document.getElementById('share-x').onclick = () => {
+        const url = `https://twitter.com/intent/tweet?text=${encodedText}${PAGE_URL ? `&url=${encodedURL}` : ""}`;
+        openShareWindow(url);
+      };
+
+      // Facebook (працює із URL; при file:// просто відкриється діалог)
+      document.getElementById('share-fb').onclick = () => {
+        const url = `https://www.facebook.com/sharer/sharer.php?u=${encodedURL}`;
+        openShareWindow(url);
+      };
+
+      // Threads
+      document.getElementById('share-threads').onclick = () => {
+        const url = `https://www.threads.net/intent/post?text=${encodedText}${PAGE_URL ? `%20${encodedURL}` : ""}`;
+        openShareWindow(url);
+      };
     }
 
     function escapeHTML(s){
