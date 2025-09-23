@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <title>Всесвітня база геїв</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* ========== Design Tokens ========== */
+    :root{
+      --bg: #0f1222;
+      --panel: #161a2b;
+      --panel-2: #1b2035;
+      --text: #f2f5fb;
+      --muted: #aab3c7;
+      --soft-pink: #f5a7c4;
+      --ring: #ffd6e8;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+
+      --rainbow: linear-gradient(90deg,
+        rgba(255,179,217,.6) 0%,
+        rgba(255,176,126,.6) 20%,
+        rgba(255,234,138,.6) 40%,
+        rgba(168,243,155,.6) 60%,
+        rgba(158,210,255,.6) 80%,
+        rgba(200,178,255,.6) 100%);
+
+      --radius: 16px;
+      --radius-lg: 22px;
+      --maxw: 720px;
+      --transition: 220ms cubic-bezier(.2,.8,.2,1);
+    }
+
+    *,*::before,*::after{ box-sizing: border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(255,176,126,.07), transparent 60%),
+        radial-gradient(1200px 600px at 110% 10%, rgba(158,210,255,.06), transparent 60%),
+        linear-gradient(180deg,#0c0f20,#10142a 40%, #0f1222);
+    }
+
+    .wrap{
+      min-height:100%;
+      display:grid;
+      grid-template-rows: 1fr auto;
+    }
+
+    main{ display:grid; place-items:center; padding: 40px 16px; }
+
+    .card{
+      width: 100%;
+      max-width: var(--maxw);
+      background: linear-gradient(180deg,var(--panel),var(--panel-2));
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      isolation:isolate;
+    }
+    .card::before{
+      content:"";
+      position:absolute; inset:0;
+      background: var(--rainbow);
+      opacity:.18;
+      filter: blur(10px) saturate(120%);
+      mask: radial-gradient(60% 40% at 20% -10%, black, transparent 70%);
+      z-index:0;
+      pointer-events:none;
+    }
+
+    .stack{ position:relative; z-index:1; }
+
+    h1{
+      margin: 0 0 18px;
+      font-weight: 800;
+      font-size: clamp(22px, 3.5vw, 34px);
+      letter-spacing:.2px;
+      line-height:1.15;
+      background: linear-gradient(180deg,#fff, #e9eefb 60%, #d9e1fa);
+      -webkit-background-clip: text; background-clip:text; color: transparent;
+      text-align:center;
+    }
+    p.lead{ margin:0 0 20px; color: var(--muted); text-align:center; }
+
+    .row{ display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center; }
+    .field{ flex: 1 1 340px; min-width: 220px; position: relative; }
+    label.visually-hidden{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+
+    input[type="text"]{
+      width:100%;
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.12);
+      padding: 14px 16px;
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    input[type="text"]::placeholder{ color: #c8cfdd; opacity:.7; }
+    input[type="text"]:focus{ border-color: var(--soft-pink); box-shadow: 0 0 0 3px rgba(245,167,196,.25); }
+    .helper{ font-size: 13px; color:#ffccd8; margin-top:6px; min-height:1.2em; }
+
+    .btn{
+      appearance:none; border:none; cursor:pointer;
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      font-weight: 700; letter-spacing:.3px;
+      color:#271724;
+      background: linear-gradient(180deg, var(--soft-pink), #f494b7);
+      box-shadow: 0 6px 18px rgba(245,167,196,.25), inset 0 0 0 1px rgba(255,255,255,.35);
+      transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
+    }
+    .btn:hover{ filter: brightness(1.03); }
+    .btn:active{ transform: translateY(1px) scale(.99); }
+    .btn:focus-visible{ outline: 3px solid var(--ring); outline-offset: 2px; }
+
+    .text-btn{
+      background: none; border:none; color: #ffd6e8; cursor:pointer; padding:6px 10px; border-radius: 10px;
+    }
+    .text-btn:hover{ background: rgba(255,255,255,.06); }
+    .text-btn:focus-visible{ outline: 3px solid var(--ring); outline-offset:2px; }
+
+    @keyframes shake {
+      10%, 90% { transform: translateX(-1px); }
+      20%, 80% { transform: translateX(2px); }
+      30%, 50%, 70% { transform: translateX(-4px);}
+      40%, 60% { transform: translateX(4px); }
+    }
+    .shake{ animation: shake 420ms cubic-bezier(.36,.07,.19,.97) both; }
+
+    .overlay{
+      position: fixed; inset:0;
+      display:none;
+      align-items:center; justify-content:center;
+      background: rgba(12,14,26,.64);
+      backdrop-filter: blur(6px) saturate(115%);
+      z-index: 50;
+    }
+    .overlay[data-open="true"]{ display:flex; }
+
+    .sheet{
+      width:min(900px, 92vw);
+      min-height:min(540px, 84vh);
+      max-height:90vh;
+      border-radius: 28px;
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg,#171b32 20%, #12162b 100%);
+      box-shadow: 0 30px 80px rgba(0,0,0,.5);
+      padding: clamp(18px, 2.5vw, 28px);
+      display:grid;
+      grid-template-rows: auto 1fr auto;
+      position: relative;
+      overflow: hidden;
+      transform: scale(.98);
+      opacity: 0;
+      transition: transform var(--transition), opacity var(--transition);
+    }
+    .overlay[data-open="true"] .sheet{ transform: scale(1); opacity: 1; }
+
+    .sheet::before{
+      content:"";
+      position:absolute; inset:-40%;
+      background: var(--rainbow);
+      opacity:.12;
+      transform: rotate(8deg);
+      filter: blur(30px) saturate(120%);
+      pointer-events:none;
+    }
+
+    .sheet-header{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .sheet-body{ display:grid; place-items:center; text-align:center; padding: 16px; }
+    .sheet-footer{ display:flex; justify-content:center; gap:12px; flex-wrap:wrap; padding-top: 8px; }
+
+    .back{ position:absolute; top:10px; left:10px; color:#ffd6e8; font-size:14px; }
+
+    .phrase{
+      font-weight:800;
+      font-size: clamp(28px, 5vw, 48px);
+      line-height:1.2;
+      letter-spacing:.2px;
+      margin: 0;
+      background: linear-gradient(180deg,#fff,#ffe9f2 70%, #ffd6e8);
+      -webkit-background-clip:text; background-clip:text; color: transparent;
+      text-shadow: 0 2px 10px rgba(0,0,0,.25);
+    }
+
+    .inline-form{
+      display:flex; gap:10px; align-items:stretch; justify-content:center;
+      margin-top: 18px;
+      width:min(640px, 92%);
+    }
+    .inline-form input[type="text"]{ flex:1 1 auto; min-width: 180px; }
+
+    .loader{ display:grid; place-items:center; gap:16px; min-height: 52vh; }
+    .spinner{
+      width:68px; height:68px; border-radius:999px;
+      border:6px solid rgba(255,255,255,.14);
+      border-top-color: var(--soft-pink);
+      animation: spin 900ms linear infinite;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+    @keyframes spin{ to { transform: rotate(360deg); } }
+
+    .loader p{ color:#ffd6e8; letter-spacing:.3px; margin:0; }
+
+    footer{
+      color: var(--muted);
+      text-align:center;
+      font-size: 13px;
+      padding: 18px 12px 30px;
+    }
+    @media (max-width:520px){ .card{ padding:18px; } }
+    @media (prefers-reduced-motion: reduce){
+      .sheet, .btn, input[type="text"]{ transition: none !important; }
+      .spinner{ animation-duration: 1600ms; }
+      .shake{ animation-duration: 0ms; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <main>
+      <section class="card" aria-labelledby="title">
+        <div class="stack">
+          <h1 id="title">Перевірка всесвітньої бази педіків</h1>
+          <p class="lead">Введіть ім'я — і дізнайтесь, чи потрібно остерігатись і не підставлятись, або ж зробити для цієї особи камінг-аут 🌈</p>
+
+          <form class="row" id="main-form" novalidate>
+            <div class="field">
+              <label class="visually-hidden" for="q">Запит</label>
+              <input id="q" name="q" type="text" inputmode="text" autocomplete="off" placeholder="Введіть свій запит…" aria-describedby="help" />
+              <div id="help" class="helper" aria-live="polite"></div>
+            </div>
+            <button class="btn" id="submit">Перевірити</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer>Всесвітня база перевірки геїв — оберігай своє очко.</footer>
+  </div>
+
+  <!-- Overlay / Dialog -->
+  <div class="overlay" id="overlay" data-open="false" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+    <div class="sheet" id="sheet">
+      <button class="text-btn back" id="back-btn" type="button" aria-label="Повернутися на головну">← На головну</button>
+
+      <div class="sheet-header" aria-hidden="true">
+        <span></span>
+        <span id="overlay-title" class="visually-hidden">Результат перевірки</span>
+        <span></span>
+      </div>
+
+      <div class="sheet-body" id="sheet-body">
+        <!-- dynamically swaps between loader and result -->
+      </div>
+
+      <div class="sheet-footer" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <script>
+    // ======================== // phrases (edit here) // ========================
+    const PHRASES = [
+"Він смокче хуй у кожному гей-клубі — 100% гей.",
+"Його улюблений сніданок — сперма на обличчі — 100% гей.",
+"Він дрочить на гачімучі щодня — 100% гей.",
+"Його шафа повна ділдо та лубрикантів — 100% гей.",
+"Він трахається в жопу з кожним зустрічним — 100% гей.",
+"Його плейлист — звуки стогонів з гей-порно — 100% гей.",
+"Він лиже яйця як професіонал — 100% гей.",
+"Його улюблений спорт — анальний фістинг — 100% гей.",
+"Він колекціонує використані кондоми — 100% гей.",
+"Його вечір — груповий секс з хлопцями — 100% гей.",
+"Він каже 'встав мені в дупу' на привітання — 100% гей.",
+"Його улюблений напій — коктейль з сперми — 100% гей.",
+"Він дивиться тільки хардкор гей-порно — 100% гей.",
+"Його шафа — для BDSM-іграшок і хуїв — 100% гей.",
+"Він тренує дупу для великих членів — 100% гей.",
+"Його улюблений мем — Aniki з гачімучі, що трахає — 100% гей.",
+"Він любить смоктати товсті хуї — 100% гей.",
+"Його відпочинок — glory hole в туалеті — 100% гей.",
+"Він колекціонує гей-порно диски — 100% гей.",
+"Його плейлист — 'Fuck me' гачімучі ремікси — 100% гей.",
+"Він каже 'підарас' і дрочить одночасно — 100% гей.",
+"Його улюблений жарт — про ковтання сперми — 100% гей.",
+"Він обіймає хлопців з хуем в руці — 100% гей.",
+"Його шафа повна шкіряних harness для фетишу — 100% гей.",
+"Він дивиться twink-порно з жорстким трахом — 100% гей.",
+"Його улюблений актор — Billy Herrington в дії — 100% гей.",
+"Він тренує язик для риммінгу — 100% гей.",
+"Його вечірки — оргії з гачімучі тематикою — 100% гей.",
+"Він знає всі пози для гей-сексу — 100% гей.",
+"Його улюблений відпочинок — сауна з голими хлопцями — 100% гей.",
+"Він колекціонує анальні пробки — 100% гей.",
+"Його плейлист — стогони з гей-відео — 100% гей.",
+"Він каже 'гей' і вставляє палець в дупу — 100% гей.",
+"Його улюблений спорт — боротьба з хуями — 100% гей.",
+"Він любить жорсткий фістинг — 100% гей.",
+"Його шафа повна м'язевих шмоток для траху — 100% гей.",
+"Він дивиться гачімучі з дрочкою — 100% гей.",
+"Його улюблений мем — Ricardo Milos танцює голим — 100% гей.",
+"Він тренує дупу для подвійного проникнення — 100% гей.",
+"Його вечір — з хлопцями в ліжку, трахаючись — 100% гей.",
+"Він знає всі гей-клуби для сексу — 100% гей.",
+"Його улюблений напій — сперма-шот після мінету — 100% гей.",
+"Він колекціонує гей-іграшки для аналу — 100% гей.",
+"Його плейлист — гачімучі з матюками — 100% гей.",
+"Він каже 'fuck you' і трахає в жопу — 100% гей.",
+"Його улюблений жарт — про великий хуй — 100% гей.",
+"Він любить ковтати сперму — 100% гей.",
+"Його шафа — для рольових ігор з хуями — 100% гей.",
+"Він дивиться bear-порно з жорстким сексом — 100% гей.",
+"Його улюблений актор — Van Darkholme в шкірі — 100% гей.",
+"Він тренує член для топ-ролі — 100% гей.",
+"Його вечірки — фетиш-тусовки з трахом — 100% гей.",
+"Він знає всі 'отвори' для сексу — 100% гей.",
+"Його улюблений відпочинок — гей-оргія — 100% гей.",
+"Він колекціонує порно з гачімучі — 100% гей.",
+"Його плейлист — 'Ass we can' з стогонами — 100% гей.",
+"Він каже 'leather club' і дрочить — 100% гей.",
+"Його улюблений спорт — pole dancing з хуєм — 100% гей.",
+"Він любить смоктати в сауні — 100% гей.",
+"Його шафа повна фалоімітаторів — 100% гей.",
+"Він дивиться jock-порно — 100% гей.",
+"Його улюблений мем — 'Boy next door' трахається — 100% гей.",
+"Він тренує горло для deepthroat — 100% гей.",
+"Його вечір — риммінг з друзями — 100% гей.",
+"Він знає всі гей-апи для хуку — 100% гей.",
+"Його улюблений напій — cumshot коктейль — 100% гей.",
+"Він колекціонує анальні намиста — 100% гей.",
+"Його плейлист — гачімучі з оргазмами — 100% гей.",
+"Він каже 'підарас' і цілує хуй — 100% гей.",
+"Його улюблений жарт — про анальний секс — 100% гей.",
+"Він любить бути bottom в груповусі — 100% гей.",
+"Його шафа — для фетиш-аксесуарів — 100% гей.",
+"Він дивиться daddy-порно — 100% гей.",
+"Його улюблений актор — відкритий гей в порно — 100% гей.",
+"Він тренує дупу з іграшками — 100% гей.",
+"Його вечірки — секс-вечірки — 100% гей.",
+"Він знає всі ЛГБТ+ пози для траху — 100% гей.",
+"Його улюблений відпочинок — пляж з голими хлопцями — 100% гей.",
+"Він колекціонує гей-порно комікси — 100% гей.",
+"Його плейлист — дива з матюками — 100% гей.",
+"Він каже 'фаб' і смокче — 100% гей.",
+"Його улюблений спорт — танці з хуєм — 100% гей.",
+"Він любить жорсткий гей-секс — 100% гей.",
+"Його шафа повна шкіряних шмоток для BDSM — 100% гей.",
+"Він дивиться 'Queer as Folk' з дрочкою — 100% гей.",
+"Його улюблений мем — милі геї трахаються — 100% гей.",
+"Він тренує посмішку для мінету — 100% гей.",
+"Його вечір — з коктейлями і сексом — 100% гей.",
+"Він знає всі гей-фетиші — 100% гей.",
+"Його улюблений напій — мартіні з спермою — 100% гей.",
+"Він колекціонує гей-арт з хуями — 100% гей.",
+"Його плейлист — поп з гей-порно — 100% гей.",
+"Він каже 'гей' і вставляє — 100% гей.",
+"Його улюблений жарт — про член в жопі — 100% гей.",
+"Він любить обійматися з трахом — 100% гей.",
+"Його шафа — для анальних іграшок — 100% гей.",
+"Він дивиться гей-шоу з оргазмом — 100% гей.",
+"Його улюблений мем — солодкі геї в сексі — 100% гей.",
+"Він тренує харизму для хукупу — 100% гей.",
+"Його вечір — з друзями і груповим — 100% гей.",
+"Він знає всі милі гей-фетиші — 100% гей.",
+"Його улюблений напій — фруктовий з cum — 100% гей.",
+"Він любить гачімучі з трахом — 100% гей.",
+"Його улюблений відпочинок — гей-фест з оргією — 100% гей.",
+"Він каже 'підарас' і лиже — 100% гей.",
+"Його плейлист — мікс гачімучі та порно — 100% гей.",
+"Він тренує 'гей-радар' для сексу — 100% гей.",
+"Його вечірки — з гачімучі сексом — 100% гей.",
+"Він знає всі гачімучі пози — 100% гей.",
+"Його улюблений жарт — Aniki трахає — 100% гей.",
+"Він любить 'Fist of the North Star' з гей-твістом — 100% гей.",
+"Його шафа — для гачімучі фетишу — 100% гей.",
+"Він дивиться гачімучі з друзями в ліжку — 100% гей.",
+"Його улюблений мем — Billy yelling 'fuck' — 100% гей.",
+"Він тренується як в гачімучі порно — 100% гей.",
+"Його вечір — гачімучі марафон з дрочкою — 100% гей.",
+"Він знає 'Boy next door' з сексом — 100% гей.",
+"Його улюблений напій — гачімучі сперма — 100% гей.",
+"Він колекціонує гачімучі порно-мерч — 100% гей.",
+"Його плейлист — гачімучі з оргазмами — 100% гей.",
+"Він каже 'Fuck you' і вставляє член — 100% гей.",
+"Його улюблений спорт — гачімучі трах — 100% гей.",
+"Він любить гачімучі жорстко з фістингом — 100% гей.",
+"Його шафа повна м'язевих шмоток для оргій — 100% гей.",
+"Він дивиться порно з гачімучі акторами — 100% гей.",
+"Його улюблений актор — Van Darkholme трахає — 100% гей.",
+"Він тренує 'dungeon master' для BDSM — 100% гей.",
+"Його вечірки — гачімучі з груповим сексом — 100% гей.",
+"Він знає всі гачімучі стогони — 100% гей.",
+"Його улюблений відпочинок — гачімучі кон з трахом — 100% гей.",
+"Він колекціонує гачімучі секс-диски — 100% гей.",
+"Його плейлист — 'Ass we can' з матюками — 100% гей.",
+"Він каже 'Leather club' і смокче — 100% гей.",
+"Його улюблений жарт — гачімучі з хуєм — 100% гей.",
+"Він любить обіймати як в гачімучі порно — 100% гей.",
+"Його шафа — для гачімучі рольовок з сексом — 100% гей.",
+"Він дивиться гачімучі з друзями і трахається — 100% гей.",
+"Його улюблений мем — Ricardo Milos з членом — 100% гей."
+    ];
+
+    // ======================== // special override // ========================
+    const OVERRIDE_PHRASE = "100% Натурал!";
+
+    // NOTE: JS \b word boundary isn't Unicode-aware for Cyrillic reliably.
+    // We emulate word boundaries using "not a letter" via Unicode property escapes.
+    // Works in modern browsers (Chrome, Edge, Firefox, Safari).
+    // Pattern: (^|non-letter)(name)(non-letter|$)
+    function makeWordRegex(variants){
+      const body = variants.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+      return new RegExp(`(?:^|[^\\p{L}])(?:${body})(?=[^\\p{L}]|$)`,"iu");
+    }
+    const FIRST_NAME_RE = makeWordRegex(["олег","oleg","oleh"]);
+    const LAST_NAME_RE  = makeWordRegex(["гарбар","garbar"]);
+
+    function isHarbarQuery(s){
+      if(!s) return false;
+      // We consider it a "Harbar query" if BOTH first-name and last-name appear
+      // anywhere in the string, in any order, even with extra words in between.
+      return FIRST_NAME_RE.test(s) && LAST_NAME_RE.test(s);
+    }
+
+    // ======================== // state // ========================
+    let bag = [];           // shuffled pool to avoid repeats until exhausted
+    let lastPhrase = null;  // last shown phrase to avoid immediate repeat
+
+    function shuffle(arr){
+      const a = arr.slice();
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+    function refillBag(){
+      bag = shuffle(PHRASES);
+      if(lastPhrase && bag[0] === lastPhrase){
+        const idx = bag.findIndex(p => p !== lastPhrase);
+        if(idx > 0){ [bag[0], bag[idx]] = [bag[idx], bag[0]]; }
+      }
+    }
+    function nextPhrase(){
+      if(bag.length === 0) refillBag();
+      let phrase = bag.shift();
+      if(phrase === lastPhrase && PHRASES.length > 1){
+        if(bag.length === 0) refillBag();
+        phrase = bag.shift();
+      }
+      lastPhrase = phrase;
+      return phrase;
+    }
+
+    // ======================== // elements // ========================
+    const form = document.getElementById('main-form');
+    const qInput = document.getElementById('q');
+    const helper = document.getElementById('help');
+    const overlay = document.getElementById('overlay');
+    const sheetBody = document.getElementById('sheet-body');
+    const backBtn = document.getElementById('back-btn');
+
+    function trapFocus(e){
+      if(overlay.getAttribute('data-open') !== 'true') return;
+      if(e.key !== 'Tab') return;
+      const focusables = overlay.querySelectorAll('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])');
+      const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+      if(list.length === 0) return;
+      const first = list[0]; const last  = list[list.length-1];
+      if(e.shiftKey && document.activeElement === first){ last.focus(); e.preventDefault(); }
+      else if(!e.shiftKey && document.activeElement === last){ first.focus(); e.preventDefault(); }
+    }
+    document.addEventListener('keydown', trapFocus);
+
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && overlay.getAttribute('data-open') === 'true'){ closeOverlay(); }
+    });
+
+    function showHelper(msg){ helper.textContent = msg || ""; }
+    function shake(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+
+    function openOverlay(){
+      overlay.setAttribute('data-open','true');
+      renderLoader();
+      requestAnimationFrame(()=>{ backBtn.focus(); });
+    }
+    function closeOverlay(){
+      overlay.setAttribute('data-open','false');
+      sheetBody.innerHTML = '';
+      qInput.focus();
+    }
+
+    function renderLoader(){
+      sheetBody.innerHTML = `
+        <div class="loader" role="status" aria-live="polite" aria-label="Триває перевірка">
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Перевіряємо базу…</p>
+        </div>
+      `;
+    }
+    function renderResult(phrase){
+      sheetBody.innerHTML = `
+        <div style="display:grid; place-items:center;">
+          <h2 class="phrase" id="result-phrase">${escapeHTML(phrase)}</h2>
+          <form class="inline-form" id="inline-form" novalidate aria-label="Нова перевірка">
+            <label class="visually-hidden" for="q2">Перевірити іншу особу…</label>
+            <input id="q2" name="q2" type="text" inputmode="text" autocomplete="off" placeholder="Спробуйте інший запит…" />
+            <button class="btn" id="again-btn" type="submit">Перевірити ще</button>
+          </form>
+        </div>
+      `;
+      const inlineForm = document.getElementById('inline-form');
+      const q2 = document.getElementById('q2');
+      inlineForm.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        if(!q2.value.trim()){ shake(q2); return; }
+        runCheck(q2.value.trim());
+      });
+      q2.focus();
+    }
+
+    function escapeHTML(s){
+      return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function runCheck(query){
+      openOverlay();
+      const ms = 1000 + Math.floor(Math.random()*2000); // 1000..3000
+      setTimeout(()=>{
+        if(isHarbarQuery(query)){
+          lastPhrase = OVERRIDE_PHRASE; // keep no-immediate-repeat semantics
+          renderResult(OVERRIDE_PHRASE);
+          return;
+        }
+        renderResult(nextPhrase());
+      }, ms);
+    }
+
+    form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const val = qInput.value.trim();
+      if(!val){
+        showHelper("Введіть будь-що для перевірки");
+        shake(qInput); qInput.focus();
+        return;
+      }
+      showHelper("");
+      runCheck(val);
+    });
+
+    backBtn.addEventListener('click', closeOverlay);
+
+    // init
+    refillBag();
+  </script>
+</body>
+</html>
